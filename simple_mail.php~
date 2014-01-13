@@ -1,0 +1,235 @@
+<?
+Error_Reporting(E_ALL & ~E_NOTICE);
+session_start();
+?>
+<?
+// aceweb sendmail  //
+$myemail= "aceweb@yandex.ru";  // Ваш электронный адрес
+$refreshpage=""; // Страница, куда возвращается человек после отправки сообщения
+                 // оставьте пустым и тогда обновиться страница, где установлена эта форма
+$cap = "0";      // Значение: 1 - Капча включена / 0 - Капча выключена [Капча - Код на картинке]
+$maxname="30";   // Максимальное кол-во символов в имени
+$maxmsg="1500";  // Максимальное количество символов в сообщении
+function footer(){
+print "<a href=copy.php></a> <a href=readme.html></a></td></tr></table></td></tr></table>
+</body>
+</html>
+";
+}
+?>
+<html>
+<head>
+<title>Отправка письма админу</title>
+</head>
+<body>
+<?
+// Далее настраивается цвет таблицы и текста: цвет таблицы и цвет текста в заголовке таблицы
+// Для Выбора схемы - раскоментируйте её и закоментируйте текущую символами //
+
+//$bdcolor="#79BBEF";  $fcolor="#FFFFFF";  // Светлоголубой
+//$bdcolor="#FF9A00"; $fcolor="#FFFFFF";   // Оранжевый
+//$bdcolor="#FFE51A"; $fcolor="#00253B";   // Жёлтый
+//$bdcolor="#00E900"; $fcolor="#00253B";   // Светло-зеленый
+//$bdcolor="#007800"; $fcolor="#FFFFFF";   // Темно зеленый
+//$bdcolor="#D2A500"; $fcolor="#FFFFFF";   // Золотой
+$bdcolor="#BCC0C0"; $fcolor="#FFFFFF";   // Серый
+//$bdcolor="#00253B"; $fcolor="#FFFFFF";   // Темно-синий
+
+$addstyle="style='font-family: Verdana; font-size: 12px; text-decoration: none; color: #000000; cursor: default; background-color: #FFFFFF; border-style: solid; border-width: 1px; border-color: #000000;'";
+
+$back_st = "
+      <center><b><font size='+1' color='$fcolor'>Произошла ошибка</font></b></center>
+     </td>
+    </tr>
+    <tr>
+     <td colspan='2' width='100%' bgcolor='#FFFFFF'>
+"; // Строка возвращения
+$back_en = "
+<center>Вернитесь <a href='javascript:history.back(1)'><b>назад</b></a></center>
+		 </td>
+		</tr>
+	   </table>
+	  </form>
+	 </center>
+"; // Строка возвращения
+//******************* Ниже лучше ничего не трогать ************************//
+
+print "
+<center>
+<table border='0' width='330' cellpadding='1' cellspacing='0' bgcolor='$bdcolor'>
+ <tr>
+  <td>
+   <table border='0' width='100%' cellpadding='1' cellspacing='0' bgcolor='$bdcolor'>
+    <tr>
+     <td>
+      ";
+
+// Событие проверки на ошибки и отправки сообщения //
+
+if (isset($_GET['event'])) {
+if ($_GET['event']=="add")  // if ($event =="add")
+{
+$name=$_POST['name']; $msg=$_POST['msg']; $email= $_POST['email'];
+if ($name == "" || strlen($name) > $maxname) {
+print "
+$back_st
+<center>Вы не ввели имя, или вввели слишком длинное имя!</center>
+$back_en
+";
+footer();
+exit;
+}
+if ($msg == "" || strlen($msg) > $maxmsg) {
+print "
+$back_st
+<center>Ваше сообщение или пустое или превышает $maxmsg символов.</center>
+$back_en
+";
+footer();
+exit;
+}
+if (isset($_POST['email'])) {
+if(!preg_match("/^[a-z0-9\.\-_]+@[a-z0-9\-_]+\.([a-z0-9\-_]+\.)*?[a-z]+$/is", $_POST['email']) or $_POST['email']=="") {
+print "
+$back_st
+<center>E-Mail введён некоректно</center>
+$back_en
+";
+footer();
+exit;
+}
+}
+else {
+print "
+$bask_st
+<center>E-Mail не введён</center>
+$back_en
+";
+footer();
+exit;
+}
+if($cap=="1"){
+if(count($_POST)>0){
+if(isset($_SESSION['captcha_keystring']) && $_SESSION['captcha_keystring'] ==  $_POST['keystring']){
+$num = "C";
+}
+else{
+$num = "W";
+}
+}
+unset($_SESSION['captcha_keystring']);
+if($num=="W"){
+print "
+$back_st
+<center>Номер на картинке не совпал</center>
+$back_en
+";
+footer();
+exit;
+}
+}
+else {
+}
+
+// Настройки для отправки писем
+$headers=null;
+$headers.="Content-Type: text/plain; charset=windows-1251\r\n";
+$headers.="From: ".$name." <".$email.">\r\n";
+$headers.="Reply-To: ".$name." <".$email.">\r\n";
+$headers.="X-Mailer: PHP/".phpversion()."\r\n";
+
+// Собираем всю информацию в теле письма
+$ip=($_SERVER["REMOTE_ADDR"]) ? $_SERVER["REMOTE_ADDR"] : getenv("HTTP_X_FORWARDED_FOR");
+$host = $_SERVER["HTTP_HOST"];
+$self = $_SERVER["PHP_SELF"];
+$allmsg='1. Отправлено со страницы: http://'.$host.$self.chr(13).chr(10).
+        '2. Имя посетителя: '.$name.chr(13).chr(10).
+    	'3. IP посетителя: '.$ip.chr(13).chr(10).
+        '4. E-mail: '.$email.chr(13).chr(10).
+        '5. Сообщение: '.$msg.chr(13).chr(10);
+
+// Отправляем письмо майлеру на съедение ;-)
+mail("$myemail", "Сообщение от $name", $allmsg, $headers);
+// Пишем пользователю "Спасибо" и обновляем страницу через JavaScript
+if ($refreshpage=="") {
+$refreshpage = "sendmail.php";
+}
+print "
+<script language='Javascript'>
+<!--
+function reload() {location = \"$refreshpage\"}; setTimeout('reload()', 2500);
+//-->
+</script>
+<center><font size=+1><B>Cообщение отправлено</B></font>
+</td></tr><tr><td width=100% bgcolor=#FFFFFF>
+<BR><BR><BR><center><table border=0 width=300><tr><td><center>
+Спасибо <B>$name</B>, <BR>Ваше сообщение <B>успешно отправлено.</B><BR>
+Нажмите <B><a href=\"$refreshpage\"> здесь</a></B> для возврата. </td></tr></table></center><BR><BR><BR>";
+}
+
+}  else  {   // На главной странице
+?>
+      <center><b><font size='+1' color='<?=$fcolor?>'>Задать вопрос админу</font></b><a href=copy.php> </a></center>
+     </td>
+    </tr>
+    <tr>
+     <td colspan='2' width='100%' bgcolor='#FFFFFF'>
+	  <center>
+	  <form action='sendmail.php?event=add' method='post' name='REPLIER'>
+	   <table border='0' cellpadding='1' cellspacing='0' width='300'>
+	    <tr>
+		 <td>
+	 	  <b>Имя</b> <small></small>
+		 </td>
+		 <td>
+		  Ваш E-mail
+		 </td>
+		</tr>
+		<tr>
+	 	 <td>
+		  <input type='text' <?=$addstyle?> value='' name='name' size='20'>
+		 </td>
+	 	 <td>
+		  <input type='text' <?=$addstyle?> value='' name='email' size='20'>
+		 </td>
+		</tr>
+	 	<tr>
+		 <td colspan='2'>
+		  <b>Сообщение</b> <small></small>
+		 </td>
+		</tr>
+	 	<tr>
+		 <td colspan='2'>
+		  <textarea <?=$addstyle?> cols='46' rows='6' size='500' name='msg'></textarea>
+		 </td>
+		</tr>
+		<?
+		if($cap=="1"){
+        ?>
+	    <tr>
+		 <td>
+	 	  <a href='copy.php' target= '_blank'><img src='img.php?<?=session_name()?>=<?=session_id()?>' border=0></a>
+		 </td>
+		 <td>
+		  Код с картинки (<b>цифры</b>)
+		  <input type='text' name='keystring'>
+		 </td>
+		</tr>
+		<?
+		}
+		else {
+		}
+		?>
+		<tr>
+		 <td colspan='2'>
+		  <center><input type='submit' <?=$addstyle?> value='Отправить'>
+		 </td>
+		</tr>
+	   </table>
+	  </form>
+	  <a href=util/inc.php></a>
+	 </center>
+<?
+}
+footer();
+?>
